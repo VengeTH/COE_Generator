@@ -61,6 +61,9 @@ export default function COEForm() {
     position: "",
     office_name: "",
     salary_numeric: "",
+    start_date_raw: "",
+    end_date_raw: "",
+    is_currently_employed: false,
   });
 
   const [fieldErrors, setFieldErrors] = useState({});
@@ -82,14 +85,32 @@ export default function COEForm() {
       parseFloat(formData.salary_numeric) < 0
     ) {
       errors.salary_numeric = "Please enter a valid non-negative salary.";
-    }
-    return errors;
+    }    if (!formData.start_date_raw)
+      errors.start_date_raw = "Date hired is required.";
+    if (!formData.is_currently_employed && !formData.end_date_raw)
+      errors.end_date_raw = "Date resigned is required.";
+    if (
+      formData.start_date_raw &&
+      formData.end_date_raw &&
+      !formData.is_currently_employed &&
+      formData.end_date_raw < formData.start_date_raw
+    ) {
+      errors.end_date_raw = "Date resigned cannot be before date hired.";
+    }    return errors;
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleChange(e) {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    const newValue = type === "checkbox" ? checked : value;
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: newValue };
+      // When "currently employed" is ticked, clear the resign date
+      if (name === "is_currently_employed" && checked) {
+        updated.end_date_raw = "";
+      }
+      return updated;
+    });
     // Clear field error on change
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: "" }));
@@ -122,6 +143,9 @@ export default function COEForm() {
           position: formData.position.trim(),
           office_name: formData.office_name,
           salary_numeric: parseFloat(formData.salary_numeric),
+          start_date_raw: formData.start_date_raw,
+          end_date_raw: formData.end_date_raw,
+          is_currently_employed: formData.is_currently_employed,
         }),
       });
 
@@ -169,7 +193,15 @@ export default function COEForm() {
   }
 
   function handleReset() {
-    setFormData({ name: "", position: "", office_name: "", salary_numeric: "" });
+    setFormData({
+      name: "",
+      position: "",
+      office_name: "",
+      salary_numeric: "",
+      start_date_raw: "",
+      end_date_raw: "",
+      is_currently_employed: false,
+    });
     setFieldErrors({});
     setServerError("");
     setSuccessName("");
@@ -259,6 +291,70 @@ export default function COEForm() {
               disabled={isLoading}
             />
           </div>
+        </Field>
+
+        {/* Divider */}
+        <div className="border-t border-slate-100" />
+
+        {/* Date Hired */}
+        <Field label="Date Hired" required error={fieldErrors.start_date_raw}>
+          <input
+            type="date"
+            name="start_date_raw"
+            className="form-input"
+            value={formData.start_date_raw}
+            onChange={handleChange}
+            disabled={isLoading}
+            max={new Date().toISOString().split("T")[0]}
+          />
+        </Field>
+
+        {/* Currently Employed Checkbox */}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="is_currently_employed"
+            name="is_currently_employed"
+            checked={formData.is_currently_employed}
+            onChange={handleChange}
+            disabled={isLoading}
+            className="h-4 w-4 rounded border-slate-300 text-blue-600
+                       focus:ring-2 focus:ring-blue-200 cursor-pointer
+                       disabled:cursor-not-allowed"
+          />
+          <label
+            htmlFor="is_currently_employed"
+            className="text-sm font-medium text-slate-700 cursor-pointer select-none"
+          >
+            Currently Employed
+            <span className="ml-2 text-xs font-normal text-slate-400">
+              (leave &ldquo;Date Resigned&rdquo; blank)
+            </span>
+          </label>
+        </div>
+
+        {/* Date Resigned */}
+        <Field
+          label="Date Resigned"
+          required={!formData.is_currently_employed}
+          error={fieldErrors.end_date_raw}
+        >
+          <input
+            type="date"
+            name="end_date_raw"
+            className="form-input"
+            value={formData.end_date_raw}
+            onChange={handleChange}
+            disabled={isLoading || formData.is_currently_employed}
+            min={formData.start_date_raw || undefined}
+            max={new Date().toISOString().split("T")[0]}
+          />
+          {formData.is_currently_employed && (
+            <p className="text-xs text-slate-400 mt-1 italic">
+              Disabled — employee is currently employed (end date will be set to
+              &ldquo;present&rdquo;).
+            </p>
+          )}
         </Field>
 
         {/* Server error banner */}

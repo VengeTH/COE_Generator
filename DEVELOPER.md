@@ -69,7 +69,7 @@ npm install
 npm start
 ```
 
-Runs on `http://localhost:3000`.  
+Runs on `http://localhost:3000`.
 The `"proxy": "http://localhost:5000"` entry in `frontend/package.json` forwards all `/api/*` requests to the backend automatically — no CORS config needed in development.
 
 ### Production build
@@ -97,8 +97,10 @@ The file must contain these **exact** placeholder tags (curly braces, no spaces)
 | `{salary_in_words}` | e.g. *Twenty-Five Thousand Pesos*                          |
 | `{salary_numeric}`  | e.g. *Php 25,000.00*                                       |
 | `{date_generated}`  | e.g. *19th day of February 2026*                           |
+| `{start_date}`      | e.g. *August 1, 1989*                                      |
+| `{end_date}`        | e.g. *January 30, 2026* — or the literal word *present*    |
 
-> Tags use single curly braces `{ }` — docxtemplater's default delimiters.  
+> Tags use single curly braces `{ }` — docxtemplater's default delimiters.
 > Do **not** use `{{ }}`, `[[ ]]`, or `< >`.
 
 ---
@@ -120,18 +122,24 @@ Content-Type: application/json
   "name": "Juan Dela Cruz",
   "position": "Administrative Assistant II",
   "office_name": "HRMO",
-  "salary_numeric": 25000
+  "salary_numeric": 25000,
+  "start_date_raw": "1989-08-01",
+  "end_date_raw": "2026-01-30",
+  "is_currently_employed": false
 }
 ```
 
-| Field            | Type   | Required | Description                        |
-|------------------|--------|----------|------------------------------------|
-| `name`           | string | Yes      | Employee's full name               |
-| `position`       | string | Yes      | Position or designation            |
-| `office_name`    | string | Yes      | Office or department               |
-| `salary_numeric` | number | Yes      | Monthly salary (non-negative)      |
+| Field                    | Type    | Required                          | Description                                    |
+|--------------------------|---------|-----------------------------------|------------------------------------------------|
+| `name`                   | string  | Yes                               | Employee's full name                           |
+| `position`               | string  | Yes                               | Position or designation                        |
+| `office_name`            | string  | Yes                               | Office or department                           |
+| `salary_numeric`         | number  | Yes                               | Monthly salary (non-negative)                  |
+| `start_date_raw`         | string  | Yes                               | Date hired — `YYYY-MM-DD` format               |
+| `end_date_raw`           | string  | Only if not currently employed    | Date resigned — `YYYY-MM-DD` format            |
+| `is_currently_employed`  | boolean | No (defaults to `false`)          | If `true`, `{end_date}` is set to `"present"` |
 
-**Success response:**  
+**Success response:**
 `200 OK` — binary `.docx` file stream with headers:
 ```
 Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
@@ -174,7 +182,7 @@ The response blob is converted to an object URL, a temporary `<a>` element is cl
 
 ## Environment Variables
 
-The backend reads `process.env.PORT` (defaults to `5000`).  
+The backend reads `process.env.PORT` (defaults to `5000`).
 Create a `backend/.env` file to override:
 
 ```

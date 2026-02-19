@@ -78,11 +78,31 @@ function formatSalaryNumeric(amount) {
   return `Php ${formatted}`;
 }
 
+/**
+ * Parses a "YYYY-MM-DD" date string into "Month D, YYYY" (e.g. "August 1, 1989").
+ * Uses a local-time Date constructor to avoid UTC-offset day shifts.
+ * @param {string} dateStr  — "YYYY-MM-DD"
+ * @returns {string}
+ */
+function formatEmploymentDate(dateStr) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const d = new Date(year, month - 1, day); // local time — no UTC shift
+  return format(d, "MMMM d, yyyy");
+}
+
 // ─── Route ────────────────────────────────────────────────────────────────────
 
 app.post("/api/generate-coe", (req, res) => {
   try {
-    const { name, position, office_name, salary_numeric } = req.body;
+    const {
+      name,
+      position,
+      office_name,
+      salary_numeric,
+      start_date_raw,
+      end_date_raw,
+      is_currently_employed,
+    } = req.body;
 
     // ── Validate required fields ──────────────────────────────────────────────
     const missing = [];
@@ -92,6 +112,8 @@ app.post("/api/generate-coe", (req, res) => {
       missing.push("office_name");
     if (salary_numeric === undefined || salary_numeric === null || salary_numeric === "")
       missing.push("salary_numeric");
+    if (!start_date_raw) missing.push("start_date_raw");
+    if (!is_currently_employed && !end_date_raw) missing.push("end_date_raw");
 
     if (missing.length > 0) {
       return res.status(400).json({
@@ -106,11 +128,25 @@ app.post("/api/generate-coe", (req, res) => {
         .json({ error: "salary_numeric must be a valid non-negative number." });
     }
 
+    // Validate date format (must be YYYY-MM-DD)
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!datePattern.test(start_date_raw)) {
+      return res.status(400).json({ error: "start_date_raw must be in YYYY-MM-DD format." });
+    }
+    if (!is_currently_employed && !datePattern.test(end_date_raw)) {
+      return res.status(400).json({ error: "end_date_raw must be in YYYY-MM-DD format." });
+    }
+
     // ── Build template variables ──────────────────────────────────────────────
     const today = new Date();
     const dateGenerated = formatDateLong(today);
     const salaryInWords = salaryToWords(salaryAmount);
     const salaryFormatted = formatSalaryNumeric(salaryAmount);
+
+    const startDate = formatEmploymentDate(start_date_raw);
+    const endDate = is_currently_employed
+      ? "present"
+      : formatEmploymentDate(end_date_raw);
 
     // ── Load template ─────────────────────────────────────────────────────────
     const templatePath = path.join(__dirname, "template.docx");
@@ -140,6 +176,8 @@ app.post("/api/generate-coe", (req, res) => {
       salary_in_words: salaryInWords,
       salary_numeric: salaryFormatted,
       date_generated: dateGenerated,
+      start_date: startDate,
+      end_date: endDate,
     });
 
     // ── Generate output buffer ────────────────────────────────────────────────
