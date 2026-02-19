@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COE Generator</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui"] }
+        }
+      }
+    };
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- PizZip -->
+  <script src="https://unpkg.com/pizzip@3.1.7/dist/pizzip.js"></script>
+  <!-- Docxtemplater -->
+  <script src="https://unpkg.com/docxtemplater@3.50.0/build/docxtemplater.js"></script>
+  <!-- FileSaver -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+  <style>
+    .form-input {
+      width: 100%;
+      border-radius: 0.5rem;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      padding: 0.625rem 1rem;
+      font-size: 0.875rem;
+      color: #1e293b;
+      box-shadow: 0 1px 2px 0 rgba(0,0,0,.05);
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+    }
+    .form-input:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      background: #f8fafc;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+  </style>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 font-sans antialiased flex flex-col items-center justify-center px-4 py-12">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────────── -->
+  <div class="mb-8 text-center">
+    <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 shadow-lg mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24"
+           stroke="currentColor" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0
+             01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    </div>
+    <h1 class="text-3xl font-bold text-slate-800 tracking-tight">COE Generator</h1>
+    <p class="mt-1 text-sm text-slate-500">Certificate of Employment &mdash; fill in the details below to generate a document.</p>
+  </div>
+
+  <!-- ── Card ───────────────────────────────────────────────────────────────── -->
+  <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-200 overflow-hidden">
+
+    <!-- Card header -->
+    <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-base font-semibold text-slate-800">Employee Details</h2>
+      <p class="text-xs text-slate-500 mt-0.5">
+        All fields marked with <span class="text-red-500">*</span> are required.
+      </p>
+    </div>
+
+    <form id="coeForm" novalidate class="px-6 py-6 space-y-5">
+
+      <!-- Template File -->
+      <div class="flex flex-col gap-1">
+        <label class="block text-sm font-medium text-slate-700 mb-1.5">
+          Template File <span class="text-red-500">*</span>
+          <span class="ml-1 text-xs font-normal text-slate-400">(.docx)</span>
+        </label>
+        <label id="dropZone"
+          class="flex flex-col items-center justify-center gap-2 w-full rounded-lg border-2 border-dashed
+                 border-slate-300 bg-slate-50 px-4 py-5 cursor-pointer text-center
+                 hover:border-blue-400 hover:bg-blue-50/40 transition duration-150">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15
+                 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <span id="dropLabel" class="text-sm text-slate-500">
+            <span class="font-medium text-blue-600">Click to upload</span> or drag &amp; drop
+          </span>
+          <span class="text-xs text-slate-400">template.docx</span>
+          <input id="templateFile" type="file" accept=".docx" class="sr-only" />
+        </label>
+        <p id="templateFile-error" class="hidden text-xs text-red-500 flex items-center gap-1 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0
+              012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span></span>
+        </p>
+        <!-- Cached template badge -->
+        <p id="templateCachedBadge" class="hidden text-xs text-blue-600 flex items-center gap-1.5 mt-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0
+              00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd" />
+          </svg>
+          <span>Auto-loaded from last session.</span>
+          <button type="button" id="clearTemplateBtn"
+            class="ml-1 underline text-slate-400 hover:text-red-500 transition duration-150">
+            Clear &amp; change
+          </button>
+        </p>
+      </div>
+
+      <!-- Divider -->
+      <div class="border-t border-slate-100"></div>
+
+      <!-- Full Name -->
+      <div class="flex flex-col gap-1">
+        <label class="block text-sm font-medium text-slate-700 mb-1.5">
+          Full Name <span class="text-red-500">*</span>
+        </label>
+        <div class="flex gap-2">
+          <!-- Honorific -->
+          <select id="honorific"
+            class="form-input w-28 flex-shrink-0"
+            style="padding-left:0.625rem; padding-right:0.5rem;">
+            <option value="">— Title —</option>
+            <option>Mr.</option>
+            <option>Ms.</option>
+            <option>Mrs.</option>
+            <option>Dr.</option>
+            <option>Engr.</option>
+            <option>Atty.</option>
+          </select>
+          <!-- Name -->
+          <input id="name" type="text" class="form-input flex-1"
+            placeholder="e.g. Juan Dela Cruz"
+            autocomplete="name" autocapitalize="words" />
+        </div>
+        <p id="name-error" class="hidden text-xs text-red-500 flex items-center gap-1 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0
+              012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span></span>
+        </p>
+      </div>
+
+      <!-- Position -->
+      <div class="flex flex-col gap-1">
+        <label for="position" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Position / Designation <span class="text-red-500">*</span>
+        </label>
+        <input id="position" type="text" class="form-input" placeholder="e.g. Administrative Assistant II" />
+        <p id="position-error" class="hidden text-xs text-red-500 flex items-center gap-1 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0
+              012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span></span>
+        </p>
+      </div>
+
+      <!-- Gender -->
+      <div class="flex flex-col gap-1">
+        <label for="gender" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Gender <span class="text-red-500">*</span>
+        </label>
+        <select id="gender" class="form-input">
+          <option value="" disabled selected>— Select gender —</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+        <p id="gender-error" class="hidden text-xs text-red-500 flex items-center gap-1 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0
+              012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span></span>
+        </p>
+      </div>
+
+      <!-- Office / Department -->
+      <div class="flex flex-col gap-1">
+        <label for="office_name" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Office / Department <span class="text-red-500">*</span>
+        </label>
+        <select id="office_name" class="form-input">
+          <option value="" disabled selected>— Select an office —</option>
+          <option>Mayor's Office</option>
+          <option>Vice Mayor's Office</option>
+          <option>HRMO</option>
+          <option>MSWDO</option>
+          <option>Engineering Office</option>
+          <option>Budget Office</option>
+          <option>Accounting Office</option>
+          <option>Assessor's Office</option>
+          <option>Civil Registrar's Office</option>
+          <option>Health Office</option>
+          <option>BPLO</option>
+          <option>DILG</option>
+          <option>Tourism Office</option>
+          <option>Agriculture Office</option>
+          <option>Environment and Natural Resources Office</option>
+          <option>Disaster Risk Reduction and Management Office</option>
+          <option>Legal Office</option>
+          <option>Information Office</option>
+          <option>Sangguniang Bayan</option>
+          <option>Other</option>
+        </select>
+        <p id="office_name-error" class="hidden text-xs text-red-500 flex items-center gap-1 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0
+              012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span></span>
+        </p>
+      </div>
+
+      <!-- Salary -->
+      <div class="flex flex-col gap-1">
+        <label for="salary" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Annual Salary (PHP) <span class="text-red-500">*</span>
+        </label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium pointer-events-none">₱</span>
+          <input id="salary" type="number" class="form-input pl-8" placeholder="e.g. 25000" min="0" step="0.01" />
+        </div>
+        <p id="salary-error" class="hidden text-xs text-red-500 flex items-center gap-1 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0
+              012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span></span>
+        </p>
+      </div>
+
+      <!-- Divider -->
+      <div class="border-t border-slate-100"></div>
+
+      <!-- Date Hired -->
+      <div class="flex flex-col gap-1">
+        <label for="start_date" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Date Hired <span class="text-red-500">*</span>
+        </label>
+        <input id="start_date" type="date" class="form-input" />
+        <p id="start_date-error" class="hidden text-xs text-red-500 flex items-center gap-1 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0
+              012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span></span>
+        </p>
+      </div>
+
+      <!-- Currently Employed Checkbox -->
+      <div class="flex items-center gap-3">
+        <input id="is_current" type="checkbox"
+          class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-200 cursor-pointer" />
+        <label for="is_current" class="text-sm font-medium text-slate-700 cursor-pointer select-none">
+          Currently Employed
+          <span class="ml-2 text-xs font-normal text-slate-400">(leave "Date Resigned" blank)</span>
+        </label>
+      </div>
+
+      <!-- Date Resigned -->
+      <div class="flex flex-col gap-1">
+        <label for="end_date" class="block text-sm font-medium text-slate-700 mb-1.5">
+          Date Resigned <span id="end_date-required-star" class="text-red-500">*</span>
+        </label>
+        <input id="end_date" type="date" class="form-input" />
+        <p id="end_date-currently" class="hidden text-xs text-slate-400 mt-1 italic">
+          Disabled &mdash; employee is currently employed (end date will be set to &ldquo;present&rdquo;).
+        </p>
+        <p id="end_date-error" class="hidden text-xs text-red-500 flex items-center gap-1 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0
+              012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span></span>
+        </p>
+      </div>
+
+      <!-- ── Error / Success banners ────────────────────────────────────────── -->
+      <div id="errorBanner" class="hidden flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414
+            1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0
+            001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+        </svg>
+        <span id="errorBannerText"></span>
+      </div>
+
+      <div id="successBanner" class="hidden flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0
+            00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        <span id="successBannerText"></span>
+      </div>
+
+      <!-- ── Action Buttons ─────────────────────────────────────────────────── -->
+      <div class="flex items-center gap-3 pt-1">
+        <button id="generateBtn" type="submit"
+          class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5
+                 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800
+                 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2
+                 disabled:opacity-60 disabled:cursor-not-allowed transition duration-150">
+          <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <svg id="btnSpinner" class="hidden h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg"
+               fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span id="btnLabel">Generate &amp; Download COE</span>
+        </button>
+
+        <button type="button" id="resetBtn"
+          class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-600
+                 shadow-sm hover:bg-slate-50 active:bg-slate-100
+                 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2
+                 transition duration-150">
+          Reset
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <p class="mt-8 text-xs text-slate-400">Municipality HR &mdash; Internal Tool</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns ordinal suffix for a day number (1→"st", 2→"nd", etc.) */
+function ordinalSuffix(n) {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return "th";
+  switch (n % 10) {
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
+    default: return "th";
+  }
+}
+
+/** Formats a Date as "3rd day of February 2026" */
+function formatDateLong(date) {
+  const d = date.getDate();
+  const month = date.toLocaleString("en-US", { month: "long" });
+  return `${d}${ordinalSuffix(d)} day of ${month} ${date.getFullYear()}`;
+}
+
+/**
+ * Parses a "YYYY-MM-DD" string into a local-time Date to avoid UTC offset shifts.
+ * e.g. "1989-08-01" → Aug 1 1989 00:00 local time
+ */
+function parseDateLocal(str) {
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Formats a local-time date as "August 1, 1989" */
+function formatEmploymentDate(str) {
+  const date = parseDateLocal(str);
+  const month = date.toLocaleString("en-US", { month: "long" });
+  return `${month} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
+/**
+ * Converts an integer to title-case English words.
+ * Supports 0 – 999,999,999.
+ */
+function numberToWords(n) {
+  if (n === 0) return "Zero";
+
+  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
+                "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen",
+                "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty",
+                "Sixty", "Seventy", "Eighty", "Ninety"];
+
+  function chunkToWords(num) {
+    if (num === 0) return "";
+    if (num < 20) return ones[num];
+    if (num < 100) {
+      return tens[Math.floor(num / 10)] + (num % 10 ? " " + ones[num % 10] : "");
+    }
+    const rem = num % 100;
+    return ones[Math.floor(num / 100)] + " Hundred" +
+           (rem ? " " + chunkToWords(rem) : "");
+  }
+
+  const parts = [];
+  const millions   = Math.floor(n / 1_000_000);
+  const thousands  = Math.floor((n % 1_000_000) / 1_000);
+  const remainder  = n % 1_000;
+
+  if (millions)  parts.push(chunkToWords(millions)  + " Million");
+  if (thousands) parts.push(chunkToWords(thousands) + " Thousand");
+  if (remainder) parts.push(chunkToWords(remainder));
+
+  return parts.join(" ");
+}
+
+/** Converts a numeric salary amount to words with "Pesos" appended. */
+function salaryToWords(amount) {
+  return numberToWords(Math.floor(amount)) + " Pesos";
+}
+
+/** Formats a number as "Php 1,050,540.00" */
+function formatSalaryNumeric(amount) {
+  return "Php " + Number(amount).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+// ─── UI state helpers ─────────────────────────────────────────────────────────
+
+function showError(fieldId, msg) {
+  const el = document.getElementById(fieldId + "-error");
+  if (!el) return;
+  el.querySelector("span").textContent = msg;
+  el.classList.remove("hidden");
+}
+
+function clearError(fieldId) {
+  const el = document.getElementById(fieldId + "-error");
+  if (el) el.classList.add("hidden");
+}
+
+function setLoading(on) {
+  const btn    = document.getElementById("generateBtn");
+  const icon   = document.getElementById("btnIcon");
+  const spin   = document.getElementById("btnSpinner");
+  const label  = document.getElementById("btnLabel");
+  btn.disabled = on;
+  icon.classList.toggle("hidden", on);
+  spin.classList.toggle("hidden", !on);
+  label.textContent = on ? "Generating…" : "Generate & Download COE";
+}
+
+function showBanner(type, msg) {
+  ["error", "success"].forEach(t => {
+    document.getElementById(t + "Banner").classList.add("hidden");
+  });
+  document.getElementById(type + "BannerText").textContent = msg;
+  document.getElementById(type + "Banner").classList.remove("hidden");
+}
+
+// ─── Checkbox: toggle Date Resigned ──────────────────────────────────────────
+
+const isCurrentCb  = document.getElementById("is_current");
+const endDateInput = document.getElementById("end_date");
+const endDateStar  = document.getElementById("end_date-required-star");
+const endDateHint  = document.getElementById("end_date-currently");
+
+isCurrentCb.addEventListener("change", () => {
+  const checked = isCurrentCb.checked;
+  endDateInput.disabled = checked;
+  endDateInput.value    = checked ? "" : endDateInput.value;
+  endDateStar.classList.toggle("hidden", checked);
+  endDateHint.classList.toggle("hidden", !checked);
+  clearError("end_date");
+});
+
+// ─── IndexedDB: persist template across sessions ─────────────────────────────
+
+const IDB_NAME    = "coe-generator";
+const IDB_STORE   = "template";
+const IDB_KEY     = "current";
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function saveTemplateToIDB(name, buffer) {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).put({ name, buffer }, IDB_KEY);
+  } catch (e) { console.warn("IDB save failed:", e); }
+}
+
+async function loadTemplateFromIDB() {
+  try {
+    const db = await openIDB();
+    return await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE, "readonly")
+                    .objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = e => resolve(e.target.result || null);
+      req.onerror   = e => reject(e.target.error);
+    });
+  } catch (e) { console.warn("IDB load failed:", e); return null; }
+}
+
+async function clearTemplateFromIDB() {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).delete(IDB_KEY);
+  } catch (e) { console.warn("IDB clear failed:", e); }
+}
+
+// ─── Cached template (module-level) ──────────────────────────────────────────
+// Holds { name: string, buffer: ArrayBuffer } or null.
+let cachedTemplate = null;
+
+const fileInput          = document.getElementById("templateFile");
+const dropZone           = document.getElementById("dropZone");
+const dropLabel          = document.getElementById("dropLabel");
+const templateCachedBadge = document.getElementById("templateCachedBadge");
+const clearTemplateBtn   = document.getElementById("clearTemplateBtn");
+
+function setDropZoneFile(name, fromCache) {
+  dropLabel.innerHTML = `<span class="font-medium text-blue-600">${name}</span>`;
+  if (fromCache) {
+    templateCachedBadge.classList.remove("hidden");
+  } else {
+    templateCachedBadge.classList.add("hidden");
+  }
+  clearError("templateFile");
+}
+
+function resetDropZone() {
+  dropLabel.innerHTML =
+    `<span class="font-medium text-blue-600">Click to upload</span> or drag &amp; drop`;
+  templateCachedBadge.classList.add("hidden");
+  cachedTemplate = null;
+}
+
+// Auto-load saved template on startup
+(async () => {
+  const saved = await loadTemplateFromIDB();
+  if (saved) {
+    cachedTemplate = saved;
+    setDropZoneFile(saved.name, true);
+  }
+})();
+
+// "Clear & change" button
+clearTemplateBtn.addEventListener("click", async (e) => {
+  e.preventDefault(); // don't trigger label's file picker
+  e.stopPropagation();
+  await clearTemplateFromIDB();
+  resetDropZone();
+  fileInput.value = "";
+});
+
+// Read file as ArrayBuffer helper
+function readFileAsBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = ev => resolve(ev.target.result);
+    reader.onerror = ()  => reject(new Error("Failed to read the template file."));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+fileInput.addEventListener("change", async () => {
+  const f = fileInput.files[0];
+  if (!f) return;
+  const buffer = await readFileAsBuffer(f);
+  cachedTemplate = { name: f.name, buffer };
+  await saveTemplateToIDB(f.name, buffer);
+  setDropZoneFile(f.name, false);
+});
+
+// Drag & drop support
+dropZone.addEventListener("dragover", e => {
+  e.preventDefault();
+  dropZone.classList.add("border-blue-400", "bg-blue-50/40");
+});
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("border-blue-400", "bg-blue-50/40");
+});
+dropZone.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("border-blue-400", "bg-blue-50/40");
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith(".docx")) {
+    const buffer = await readFileAsBuffer(file);
+    cachedTemplate = { name: file.name, buffer };
+    await saveTemplateToIDB(file.name, buffer);
+    setDropZoneFile(file.name, false);
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+  } else {
+    showError("templateFile", "Please drop a valid .docx file.");
+  }
+});
+
+// ─── Auto-capitalize employee name (title case each word) ───────────────────
+
+document.getElementById("name").addEventListener("input", function () {
+  const pos = this.selectionStart; // preserve cursor position
+  this.value = this.value.replace(/\S+/g, w => w.charAt(0).toUpperCase() + w.slice(1));
+  this.setSelectionRange(pos, pos);
+});
+
+// ─── Clear errors on input ────────────────────────────────────────────────────
+
+["name", "position", "gender", "office_name", "salary", "start_date", "end_date"].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener("input", () => clearError(id));
+  if (el) el.addEventListener("change", () => clearError(id));
+});
+
+// ─── Reset ────────────────────────────────────────────────────────────────────
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  document.getElementById("coeForm").reset();
+  // Keep the cached template — only reset form fields.
+  // If there IS a cached template, restore its UI; otherwise clear the drop zone.
+  if (cachedTemplate) {
+    setDropZoneFile(cachedTemplate.name, true);
+  } else {
+    fileInput.value = "";
+    dropLabel.innerHTML = `<span class="font-medium text-blue-600">Click to upload</span> or drag &amp; drop`;
+    templateCachedBadge.classList.add("hidden");
+  }
+  endDateInput.disabled = false;
+  endDateStar.classList.remove("hidden");
+  endDateHint.classList.add("hidden");
+  ["templateFile", "name", "position", "gender", "office_name", "salary",
+   "start_date", "end_date"].forEach(clearError);
+  document.getElementById("errorBanner").classList.add("hidden");
+  document.getElementById("successBanner").classList.add("hidden");
+});
+
+// ─── Generate ─────────────────────────────────────────────────────────────────
+
+document.getElementById("coeForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  document.getElementById("errorBanner").classList.add("hidden");
+  document.getElementById("successBanner").classList.add("hidden");
+
+  // ── Collect values ────────────────────────────────────────────────────────
+  const honorific      = document.getElementById("honorific").value;
+  const name           = document.getElementById("name").value.trim();
+  const fullName       = honorific ? `${honorific} ${name}` : name;
+  const gender         = document.getElementById("gender").value;
+  const position       = document.getElementById("position").value.trim();
+  const officeName     = document.getElementById("office_name").value;
+  const salary         = document.getElementById("salary").value;
+  const startDateRaw   = document.getElementById("start_date").value;
+  const endDateRaw     = document.getElementById("end_date").value;
+  const isCurrent      = isCurrentCb.checked;
+
+  // ── Validate ──────────────────────────────────────────────────────────────
+  let valid = true;
+
+  if (!cachedTemplate) {
+    showError("templateFile", "Please upload a .docx template file.");
+    valid = false;
+  }
+  if (!name) {
+    showError("name", "Full name is required.");
+    valid = false;
+  }
+  if (!position) {
+    showError("position", "Position is required.");
+    valid = false;
+  }
+  if (!gender) {
+    showError("gender", "Please select a gender.");
+    valid = false;
+  }
+  if (!officeName) {
+    showError("office_name", "Please select an office/department.");
+    valid = false;
+  }
+  const salaryNum = parseFloat(salary);
+  if (!salary || isNaN(salaryNum) || salaryNum < 0) {
+    showError("salary", "Please enter a valid non-negative salary.");
+    valid = false;
+  }
+  if (!startDateRaw) {
+    showError("start_date", "Date hired is required.");
+    valid = false;
+  }
+  if (!isCurrent && !endDateRaw) {
+    showError("end_date", "Date resigned is required.");
+    valid = false;
+  }
+  if (!isCurrent && startDateRaw && endDateRaw && endDateRaw < startDateRaw) {
+    showError("end_date", "Date resigned cannot be before date hired.");
+    valid = false;
+  }
+
+  if (!valid) return;
+
+  setLoading(true);
+
+  try {
+    // ── Build template data ────────────────────────────────────────────────
+    const today          = new Date();
+    const dateGenerated  = formatDateLong(today);
+    const startDate      = formatEmploymentDate(startDateRaw);
+    const endDate        = isCurrent ? "present" : formatEmploymentDate(endDateRaw);
+    const salaryInWords  = salaryToWords(salaryNum);
+    const salaryFormatted = formatSalaryNumeric(salaryNum);
+
+    // ── Derive pronouns from gender ────────────────────────────────────────
+    const pronounSubject    = gender === "male" ? "He" : "She";
+    const pronounPossessive = gender === "male" ? "his" : "her";
+
+    const data = {
+      employee_name:       fullName,
+      pronoun_subject:     pronounSubject,
+      pronoun_possessive:  pronounPossessive,
+      position:            position,
+      office_name:         officeName,
+      start_date:          startDate,
+      end_date:            endDate,
+      salary_in_words:     salaryInWords,
+      salary_numeric:      salaryFormatted,
+      date_generated:      dateGenerated,
+    };
+
+    // ── Render with PizZip + Docxtemplater ─────────────────────────────────
+    const arrayBuffer = cachedTemplate.buffer;
+    const zip = new PizZip(arrayBuffer);
+    const doc = new window.docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+    });
+
+    doc.render(data);
+
+    const outputBlob = doc.getZip().generate({
+      type: "blob",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      compression: "DEFLATE",
+    });
+
+    // ── Download ───────────────────────────────────────────────────────────
+    // Use name without honorific for the filename
+    const safeName = name.replace(/[^a-zA-Z0-9\s_-]/g, "").replace(/\s+/g, "_");
+    saveAs(outputBlob, `COE_${safeName}.docx`);
+
+    showBanner("success", `COE_${safeName}.docx has been generated and downloaded successfully.`);
+
+  } catch (err) {
+    console.error("COE generation error:", err);
+
+    // Surface docxtemplater template tag errors clearly
+    if (err.properties && Array.isArray(err.properties.errors) && err.properties.errors.length) {
+      const msgs = err.properties.errors.map(e => e.message).join("; ");
+      showBanner("error", "Template error — check your placeholder tags: " + msgs);
+    } else {
+      showBanner("error", err.message || "An unexpected error occurred during document generation.");
+    }
+  } finally {
+    setLoading(false);
+  }
+});
+</script>
+
+</body>
+</html>
